@@ -108,7 +108,7 @@
   <div class="hero">
     <div class="eyebrow">Selected work · 2016–2026</div>
     <h1>Energy projects,<br>across the world.</h1>
-    <p>Explore a selection of renewable-energy and battery-storage projects. Drag the globe, zoom in and select a project to see the story behind it.</p>
+    <p>Explore a selection of renewable-energy and battery-storage projects. Drag the Earth, zoom in and select a project to see the story behind it.</p>
     <div class="stats">
       <div class="stat"><b>10+</b><span>Years</span></div>
       <div class="stat"><b>GW+</b><span>Energy systems</span></div>
@@ -200,9 +200,27 @@ document.getElementById("app").prepend(renderer.domElement);
 const globe = new THREE.Group();
 scene.add(globe);
 
+const textureLoader = new THREE.TextureLoader();
+const earthTexture = textureLoader.load(
+  "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg"
+);
+const earthNormal = textureLoader.load(
+  "https://threejs.org/examples/textures/planets/earth_normal_2048.jpg"
+);
+const earthSpecular = textureLoader.load(
+  "https://threejs.org/examples/textures/planets/earth_specular_2048.jpg"
+);
+
 const sphere = new THREE.Mesh(
   new THREE.SphereGeometry(1,64,64),
-  new THREE.MeshPhongMaterial({color:0x15202c, emissive:0x071019, shininess:8, transparent:true, opacity:.98})
+  new THREE.MeshPhongMaterial({
+    map: earthTexture,
+    normalMap: earthNormal,
+    specularMap: earthSpecular,
+    specular: new THREE.Color(0x30485b),
+    shininess: 12,
+    color: 0xffffff
+  })
 );
 globe.add(sphere);
 
@@ -212,13 +230,27 @@ const atmosphere = new THREE.Mesh(
 );
 globe.add(atmosphere);
 
+const cloudTexture = textureLoader.load(
+  "https://threejs.org/examples/textures/planets/earth_clouds_1024.png"
+);
+const clouds = new THREE.Mesh(
+  new THREE.SphereGeometry(1.012,64,64),
+  new THREE.MeshPhongMaterial({
+    map: cloudTexture,
+    transparent: true,
+    opacity: .16,
+    depthWrite: false
+  })
+);
+globe.add(clouds);
+
 const grid = new THREE.LineSegments(
   new THREE.WireframeGeometry(new THREE.SphereGeometry(1.006,24,16)),
-  new THREE.LineBasicMaterial({color:0x4d687d,transparent:true,opacity:.13})
+  new THREE.LineBasicMaterial({color:0x8ab4c7,transparent:true,opacity:.055})
 );
 globe.add(grid);
 
-scene.add(new THREE.AmbientLight(0xffffff,.65));
+scene.add(new THREE.AmbientLight(0xffffff,.85));
 const key = new THREE.DirectionalLight(0xbfe7ff,1.8);
 key.position.set(3,2,4);
 scene.add(key);
@@ -335,6 +367,7 @@ function animate(){
   if(!dragging){
     globe.rotation.y += .0007 + velX*.08;
     globe.rotation.x += velY*.08;
+    clouds.rotation.y += .00025;
     velX*=.94;velY*=.94;
   }
   markerObjects.forEach(m=>{
