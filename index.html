@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daniel de Waal | Energy Portfolio</title>
+<style>
+  :root{
+    --bg:#05070a;
+    --panel:rgba(12,16,22,.86);
+    --line:rgba(255,255,255,.12);
+    --text:#f4f6f8;
+    --muted:#9aa4af;
+    --accent:#7dd3fc;
+    --accent2:#a78bfa;
+    --green:#86efac;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+  #app{position:relative;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% 45%,#101722 0,#05070a 55%,#020305 100%)}
+  canvas{display:block}
+  .topbar{
+    position:absolute;z-index:5;left:0;right:0;top:0;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:24px 28px;pointer-events:none;
+  }
+  .brand{pointer-events:auto}
+  .brand .name{font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .brand .role{font-size:12px;color:var(--muted);margin-top:4px}
+  .nav{display:flex;gap:8px;pointer-events:auto}
+  .nav button,.filter button{
+    border:1px solid var(--line);background:rgba(8,11,15,.55);color:#dce3ea;
+    border-radius:999px;padding:9px 13px;font-size:11px;letter-spacing:.04em;
+    cursor:pointer;backdrop-filter:blur(12px);transition:.2s;
+  }
+  .nav button:hover,.filter button:hover,.filter button.active{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.25)}
+  .hero{
+    position:absolute;z-index:4;left:28px;top:105px;max-width:430px;pointer-events:none;
+  }
+  .eyebrow{font-size:11px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spacing:-.055em}
+  .hero p{font-size:15px;line-height:1.55;color:#aeb8c2;margin:0;max-width:380px}
+  .stats{display:flex;gap:25px;margin-top:25px}
+  .stat b{display:block;font-size:22px;letter-spacing:-.03em}
+  .stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .controls{
+    position:absolute;z-index:6;left:28px;bottom:28px;display:flex;align-items:center;gap:8px;
+    pointer-events:auto;
+  }
+  .filter{display:flex;gap:6px;flex-wrap:wrap}
+  .hint{font-size:10px;color:#697581;margin-left:8px}
+  #panel{
+    position:absolute;z-index:10;right:22px;top:22px;bottom:22px;width:min(430px,calc(100vw - 44px));
+    background:var(--panel);border:1px solid var(--line);border-radius:24px;
+    backdrop-filter:blur(24px);box-shadow:0 25px 80px rgba(0,0,0,.45);
+    transform:translateX(calc(100% + 30px));transition:transform .42s cubic-bezier(.2,.8,.2,1);
+    overflow:auto;
+  }
+  #panel.open{transform:translateX(0)}
+  .panel-inner{padding:26px}
+  .close{float:right;border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:17px}
+  .tag{display:inline-flex;border:1px solid rgba(125,211,252,.25);color:var(--accent);background:rgba(125,211,252,.07);border-radius:999px;padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+  .project-title{font-size:37px;line-height:1;margin:20px 0 8px;letter-spacing:-.045em}
+  .location{color:var(--muted);font-size:13px}
+  .capacity{font-size:27px;font-weight:700;margin:24px 0 3px;letter-spacing:-.03em}
+  .capacity-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+  .rule{height:1px;background:var(--line);margin:25px 0}
+  .section-title{font-size:10px;color:#7e8994;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:9px}
+  .description{font-size:14px;line-height:1.65;color:#c3cbd3}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+  .cell{padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}
+  .cell span{display:block;color:#78838e;font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+  .cell b{font-size:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .chip{padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.055);font-size:10px;color:#d0d7de}
+  .footer-note{margin-top:30px;font-size:10px;line-height:1.5;color:#66717d}
+  #toast{
+    position:absolute;z-index:20;left:50%;bottom:28px;transform:translate(-50%,20px);
+    padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(8,11,15,.8);
+    color:#aab4bd;font-size:10px;opacity:0;transition:.25s;pointer-events:none;backdrop-filter:blur(10px)
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:700px){
+    .topbar{padding:17px}
+    .hero{left:17px;top:82px;max-width:310px}
+    h1{font-size:43px}
+    .stats{gap:15px}
+    .controls{left:17px;right:17px;bottom:17px}
+    .hint{display:none}
+    .nav button{display:none}
+    #panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;height:min(68vh,560px);border-radius:20px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="name">Daniel de Waal</div>
+      <div class="role">Energy Storage · Renewable Energy · Engineering</div>
+    </div>
+    <div class="nav">
+      <button id="reset">RESET GLOBE</button>
+      <button id="about">ABOUT</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">Selected work · 2016–2026</div>
+    <h1>Energy projects,<br>across the world.</h1>
+    <p>Explore a selection of renewable-energy and battery-storage projects. Drag the globe, zoom in and select a project to see the story behind it.</p>
+    <div class="stats">
+      <div class="stat"><b>10+</b><span>Years</span></div>
+      <div class="stat"><b>GW+</b><span>Energy systems</span></div>
+      <div class="stat"><b>GWh+</b><span>Storage</span></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="filter" id="filters"></div>
+    <div class="hint">Drag · Scroll · Click a project</div>
+  </div>
+
+  <div id="panel">
+    <div class="panel-inner">
+      <button class="close" id="close">×</button>
+      <div id="panel-content"></div>
+    </div>
+  </div>
+  <div id="toast">Drag to explore the globe</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const projects = [
+  {
+    id:"furth", name:"Fürth BESS", type:"BESS", country:"Germany", year:"2026",
+    lat:49.477, lon:10.989, capacity:"3 MW / 10 MWh",
+    role:"Energy Storage Lead", tech:"LFP", grid:"Medium voltage", delivery:"Multi-contract",
+    description:"Grid-scale battery project on a brownfield site in Bavaria, developed under tight acoustic, fire-safety and grid-connection constraints.",
+    work:["BESS sizing & technical concept","Supplier procurement & RFP","Grid connection","Fire-safety coordination","Acoustic constraints","Commercial model"]
+  },
+  {
+    id:"fulda", name:"Fulda Storage", type:"BESS", country:"Germany", year:"2026",
+    lat:50.555, lon:9.680, capacity:"Grid-scale BESS",
+    role:"Energy Storage Lead", tech:"LFP", grid:"German MV grid", delivery:"Development",
+    description:"Grid-scale storage development focused on technical feasibility, supplier selection and bankable system definition.",
+    work:["Technical feasibility","Supplier evaluation","BESS specification","Commercial modelling"]
+  },
+  {
+    id:"marsberg", name:"Marsberg BESS", type:"BESS", country:"Germany", year:"2026",
+    lat:51.461, lon:8.849, capacity:"Grid-scale BESS",
+    role:"Energy Storage Lead", tech:"LFP", grid:"German grid", delivery:"Development",
+    description:"Battery storage project developed from technical concept through supplier and commercial evaluation.",
+    work:["System architecture","RFP management","Technical due diligence","Commercial evaluation"]
+  },
+  {
+    id:"sa-hybrid", name:"South Africa Hybrid", type:"HYBRID", country:"South Africa", year:"2022",
+    lat:-30.559, lon:22.938, capacity:"Utility-scale hybrid",
+    role:"Renewable Energy Consultant", tech:"Solar + storage", grid:"Utility / microgrid", delivery:"Consulting",
+    description:"Renewable-energy system work combining solar generation, storage and optimisation for resilient power supply.",
+    work:["Techno-economic modelling","System optimisation","Resource assessment","Financial modelling"]
+  },
+  {
+    id:"uk-renewables", name:"UK Renewable Portfolio", type:"SOLAR", country:"United Kingdom", year:"2023",
+    lat:54.5, lon:-2.5, capacity:"Renewable portfolio",
+    role:"Senior Renewable Energy Consultant", tech:"Solar PV", grid:"UK grid", delivery:"Consulting",
+    description:"Renewable-energy consulting covering feasibility, yield assessment, technical modelling and investment analysis.",
+    work:["Feasibility studies","PVsyst modelling","Yield analysis","Investment support"]
+  },
+  {
+    id:"australia", name:"Australia Energy Systems", type:"SOLAR", country:"Australia", year:"2021",
+    lat:-25.3, lon:133.8, capacity:"Utility-scale systems",
+    role:"Renewable Energy Engineer", tech:"Solar + hybrid", grid:"Utility", delivery:"Engineering",
+    description:"Engineering and optimisation work across renewable-energy systems in the Australian market.",
+    work:["HOMER optimisation","System sizing","Energy modelling","Engineering design"]
+  }
+];
+
+const types = ["ALL","BESS","SOLAR","HYBRID"];
+const filterEl = document.getElementById("filters");
+let activeType = "ALL";
+types.forEach(t=>{
+  const b=document.createElement("button");
+  b.textContent=t;
+  if(t==="ALL") b.classList.add("active");
+  b.onclick=()=>{activeType=t; document.querySelectorAll(".filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active"); updateMarkers();};
+  filterEl.appendChild(b);
+});
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, .1, 1000);
+camera.position.set(0,0,3.25);
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById("app").prepend(renderer.domElement);
+
+const globe = new THREE.Group();
+scene.add(globe);
+
+const sphere = new THREE.Mesh(
+  new THREE.SphereGeometry(1,64,64),
+  new THREE.MeshPhongMaterial({color:0x15202c, emissive:0x071019, shininess:8, transparent:true, opacity:.98})
+);
+globe.add(sphere);
+
+const atmosphere = new THREE.Mesh(
+  new THREE.SphereGeometry(1.045,64,64),
+  new THREE.MeshBasicMaterial({color:0x6dd6ff, transparent:true, opacity:.055, side:THREE.BackSide})
+);
+globe.add(atmosphere);
+
+const grid = new THREE.LineSegments(
+  new THREE.WireframeGeometry(new THREE.SphereGeometry(1.006,24,16)),
+  new THREE.LineBasicMaterial({color:0x4d687d,transparent:true,opacity:.13})
+);
+globe.add(grid);
+
+scene.add(new THREE.AmbientLight(0xffffff,.65));
+const key = new THREE.DirectionalLight(0xbfe7ff,1.8);
+key.position.set(3,2,4);
+scene.add(key);
+
+function latLon(lat,lon,r=1.025){
+  const phi=(90-lat)*Math.PI/180;
+  const theta=(lon+180)*Math.PI/180;
+  return new THREE.Vector3(
+    -r*Math.sin(phi)*Math.cos(theta),
+     r*Math.cos(phi),
+     r*Math.sin(phi)*Math.sin(theta)
+  );
+}
+
+const markerGroup = new THREE.Group();
+globe.add(markerGroup);
+
+function makeMarker(p){
+  const pos=latLon(p.lat,p.lon);
+  const g=new THREE.Group();
+  g.position.copy(pos);
+  const dot=new THREE.Mesh(
+    new THREE.SphereGeometry(.022,16,16),
+    new THREE.MeshBasicMaterial({color: p.type==="BESS"?0x7dd3fc:p.type==="HYBRID"?0xa78bfa:0x86efac})
+  );
+  g.add(dot);
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(.028,.035,24),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.65,side:THREE.DoubleSide})
+  );
+  ring.lookAt(0,0,0);
+  g.add(ring);
+  g.userData.project=p;
+  markerGroup.add(g);
+  return g;
+}
+
+let markerObjects=[];
+function updateMarkers(){
+  markerGroup.clear();
+  markerObjects=[];
+  projects.filter(p=>activeType==="ALL"||p.type===activeType).forEach(p=>markerObjects.push(makeMarker(p)));
+}
+updateMarkers();
+
+let dragging=false, prevX=0, prevY=0, velX=0, velY=0;
+renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener("pointermove",e=>{
+  if(!dragging)return;
+  const dx=e.clientX-prevX, dy=e.clientY-prevY;
+  globe.rotation.y += dx*.006;
+  globe.rotation.x += dy*.006;
+  globe.rotation.x=Math.max(-1.2,Math.min(1.2,globe.rotation.x));
+  velX=dx*.006;velY=dy*.006;prevX=e.clientX;prevY=e.clientY;
+});
+renderer.domElement.addEventListener("pointerup",()=>dragging=false);
+renderer.domElement.addEventListener("wheel",e=>{
+  camera.position.z=Math.max(1.65,Math.min(5,camera.position.z+e.deltaY*.0015));
+},{passive:true});
+
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+renderer.domElement.addEventListener("click",e=>{
+  if(Math.abs(velX)+Math.abs(velY)>.03){velX=velY=0;return}
+  mouse.x=(e.clientX/innerWidth)*2-1;
+  mouse.y=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(markerGroup.children,true);
+  if(hits.length){
+    let o=hits[0].object;
+    while(o.parent && !o.userData.project)o=o.parent;
+    if(o.userData.project)openPanel(o.userData.project);
+  }
+});
+
+function openPanel(p){
+  document.getElementById("panel-content").innerHTML=`
+    <span class="tag">${p.type}</span>
+    <div class="project-title">${p.name}</div>
+    <div class="location">${p.country} · ${p.year}</div>
+    <div class="capacity">${p.capacity}</div>
+    <div class="capacity-label">Project scale</div>
+    <div class="rule"></div>
+    <div class="section-title">The project</div>
+    <div class="description">${p.description}</div>
+    <div class="grid">
+      <div class="cell"><span>Role</span><b>${p.role}</b></div>
+      <div class="cell"><span>Technology</span><b>${p.tech}</b></div>
+      <div class="cell"><span>Grid</span><b>${p.grid}</b></div>
+      <div class="cell"><span>Delivery</span><b>${p.delivery}</b></div>
+    </div>
+    <div class="rule"></div>
+    <div class="section-title">Scope of work</div>
+    <div class="chips">${p.work.map(x=>`<span class="chip">${x}</span>`).join("")}</div>
+    <div class="footer-note">Prototype content. Project descriptions and metrics can be replaced with your final public-safe portfolio data.</div>
+  `;
+  document.getElementById("panel").classList.add("open");
+}
+document.getElementById("close").onclick=()=>document.getElementById("panel").classList.remove("open");
+document.getElementById("reset").onclick=()=>{globe.rotation.set(0,0,0);camera.position.z=3.25;document.getElementById("panel").classList.remove("open")};
+document.getElementById("about").onclick=()=>openPanel({
+  type:"PORTFOLIO",name:"Daniel de Waal",country:"Energy storage & renewable energy",year:"2016–2026",
+  capacity:"10+ years",role:"Engineer · Energy Storage Lead",tech:"BESS · Solar · Hybrid",grid:"Grid & off-grid",
+  delivery:"Engineering / Consulting",description:"An interactive portfolio of selected projects, showing the geographic scale, technical scope and evolution of an energy engineering career.",
+  work:["BESS","Renewable energy","Techno-economic modelling","Supplier selection","Project development","Engineering"]
+});
+
+const toast=document.getElementById("toast");
+setTimeout(()=>toast.classList.add("show"),1200);
+setTimeout(()=>toast.classList.remove("show"),4200);
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(!dragging){
+    globe.rotation.y += .0007 + velX*.08;
+    globe.rotation.x += velY*.08;
+    velX*=.94;velY*=.94;
+  }
+  markerObjects.forEach(m=>{
+    const s=1+Math.sin(performance.now()*.004+m.position.x*20)*.12;
+    m.children[1].scale.set(s,s,s);
+  });
+  renderer.render(scene,camera);
+}
+animate();
+
+addEventListener("resize",()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
