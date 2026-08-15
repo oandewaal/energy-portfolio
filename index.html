@@ -44,22 +44,21 @@ function safe(v){return v===null||v===undefined||v===""?"":String(v)}
 function esc(v){return safe(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function list(v){return safe(v).split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean)}
 
-fetch("./projects.json")
+fetch("./projects.json", {cache:"no-store"})
   .then(r => {
-    if (!r.ok) throw new Error("projects.json could not be loaded");
+    if (!r.ok) throw new Error(`projects.json returned HTTP ${r.status}`);
     return r.json();
   })
   .then(data => {
-    // Support both a normal JSON array and the current {"content":"..."} format.
-    projects = Array.isArray(data) ? data : JSON.parse(data.content);
-
+    projects = Array.isArray(data) ? data : (data && typeof data.content === "string" ? JSON.parse(data.content) : []);
+    if (!Array.isArray(projects)) throw new Error("projects.json does not contain a project array");
     document.getElementById("loading").remove();
     buildFilters();
     updateStats();
     initGlobe();
   })
   .catch(err => {
-    document.getElementById("loading").textContent = "Could not load projects.json";
+    document.getElementById("loading").textContent = "Could not load project data";
     console.error(err);
   });
 
@@ -91,7 +90,7 @@ function initGlobe(){
  scene.add(new THREE.AmbientLight(0xffffff,.85));const key=new THREE.DirectionalLight(0xbfe7ff,1.8);key.position.set(3,2,4);scene.add(key);
  const markerGroup=new THREE.Group();globe.add(markerGroup);
  function latLon(lat,lon,r=1.025){const phi=(90-lat)*Math.PI/180,theta=(lon+180)*Math.PI/180;return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta))}
- function makeMarker(p){if(!Number.isFinite(Number(p.latitude))||!Number.isFinite(Number(p.longitude)))return null;const g=new THREE.Group();g.position.copy(latLon(Number(p.latitude),Number(p.longitude)));const color=safe(p.type).toUpperCase().includes("BESS")?0x7dd3fc:safe(p.type).toUpperCase().includes("HYBRID")?0xa78bfa:0x86efac;g.add(new THREE.Mesh(new THREE.SphereGeometry(.022,16,16),new THREE.MeshBasicMaterial({color})));const ring=new THREE.Mesh(new THREE.RingGeometry(.028,.035,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.65,side:THREE.DoubleSide}));ring.lookAt(0,0,0);g.add(ring);g.userData.project=p;markerGroup.add(g);return g}
+ function makeMarker(p){const lat=Number(p.lat??p.latitude),lon=Number(p.lon??p.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;const g=new THREE.Group();g.position.copy(latLon(lat,lon));const color=safe(p.type).toUpperCase().includes("BESS")?0x7dd3fc:safe(p.type).toUpperCase().includes("HYBRID")?0xa78bfa:0x86efac;g.add(new THREE.Mesh(new THREE.SphereGeometry(.022,16,16),new THREE.MeshBasicMaterial({color})));const ring=new THREE.Mesh(new THREE.RingGeometry(.028,.035,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.65,side:THREE.DoubleSide}));ring.lookAt(0,0,0);g.add(ring);g.userData.project=p;markerGroup.add(g);return g}
  function updateMarkers(){markerGroup.clear();markerObjects=[];projects.filter(p=>activeType==="ALL"||safe(p.type).toUpperCase()===activeType).forEach(p=>{const m=makeMarker(p);if(m)markerObjects.push(m)})}
  updateMarkers();
  let dragging=false,prevX=0,prevY=0,velX=0,velY=0;
@@ -104,7 +103,7 @@ function initGlobe(){
  function openPanel(p){
   const cap=(p.capacityMW||p.energyMWh)?`${p.capacityMW?p.capacityMW+" MW":""}${p.capacityMW&&p.energyMWh?" / ":""}${p.energyMWh?p.energyMWh+" MWh":""}`:"Project";
   const details=[["Role",p.role],["Technology",p.technology],["Grid",p.gridConnection],["Business model",p.businessModel],["Status",p.status],["Employer",p.employer]].filter(x=>x[1]);
-  const sections=[["My contribution",p.contribution],["Key challenges",p.challenges],["Technical scope",p.technicalScope],["Commercial scope",p.commercialScope],["Key technologies / systems",p.technologies],["Key achievement",p.achievement],["Project outcome",p.outcome]].filter(x=>x[1]);
+  const sections=[["My contribution",p.contribution],["Key challenges",p.challenges],["Technical scope",p.technicalScope],["Commercial scope",p.commercialScope],["Key technologies / systems",p.systems||p.technologies],["Key achievement",p.achievement],["Project outcome",p.outcome]].filter(x=>x[1]);
   document.getElementById("panel-content").innerHTML=`<span class="tag">${esc(p.type||"PROJECT")}</span><div class="project-title">${esc(p.name)}</div><div class="location">${esc(p.country)}${p.region?" · "+esc(p.region):""}${p.yearStart?" · "+esc(p.yearStart)+(p.yearEnd&&p.yearEnd!=p.yearStart?"–"+esc(p.yearEnd):""):""}</div><div class="capacity">${esc(cap)}</div><div class="capacity-label">Project scale</div><div class="rule"></div><div class="section-title">The project</div><p class="description">${esc(p.description)||"Project information supplied in the portfolio database."}</p><div class="grid">${details.map(x=>`<div class="cell"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("")}</div>${sections.map(x=>`<div class="rule"></div><div class="section-title">${esc(x[0])}</div><p class="longtext">${esc(x[1])}</p>`).join("")}<div class="footer-note">Public portfolio data. Confidentiality status: ${esc(p.publiclyDisclosable||"Not specified")}.</div>`;
   document.getElementById("panel").classList.add("open");
  }
