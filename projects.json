@@ -136,7 +136,7 @@
       "scale": "440 MW / 880 MWh BESS + 550 MWp PV",
       "projectStage": "Feasibility study",
       "role": "Project manager and technical lead",
-      "contribution": "Led BESS andPV sizing, optimisation modelling, technical design, grid-connection and capacitz review and risk assessment, given regulatory changes",
+      "contribution": "Led BESS andPV sizing, optimisation modelling, technical design, grid-connection and capacity review and risk assessment, given regulatory changes",
       "outcome": "Developed feasibility and optimisation inputs for a 440 MW BESS portfolio linked to 550 MWp PV, and quantified the implications of regulatory changes.",
       "lat": 40.961,
       "lon": 22.769
@@ -208,7 +208,7 @@
       "technology": "BESS",
       "powerRatingMW": 3.0,
       "energyRatingMWh": 10.0,
-      "scale": "10 MW / 10 MWh",
+      "scale": "3 MW / 10 MWh",
       "projectStage": "Development",
       "role": "Project Development lead",
       "contribution": "Led technical and commercial development of a 3 MW / 10 MWh BESS, including system design, supplier coordination, permitting, fire protection, acoustic compliance, grid connection and revenue-model assessment. Managed technical interfaces across a fully disaggregated delivery model and evaluated BESS supplier and optimiser options.",
