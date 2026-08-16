@@ -37,82 +37,338 @@ h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spac
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 let projects=[], activeType="ALL", markerObjects=[];
-const types=["ALL","BESS","SOLAR","HYBRID","WIND","MICROGRID","CONSULTING"];
 const app=document.getElementById("app");
 
 function safe(v){return v===null||v===undefined||v===""?"":String(v)}
 function esc(v){return safe(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function list(v){return safe(v).split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean)}
 
-fetch("./projects.json", {cache:"no-store"})
-  .then(r => {
-    if (!r.ok) throw new Error(`projects.json returned HTTP ${r.status}`);
+function splitLocation(location){
+  return safe(location).split("/").map(x=>x.trim()).filter(Boolean);
+}
+
+/* BESS MW is counted only where the scale explicitly identifies BESS capacity.
+   PV capacity is never added to the BESS statistic. */
+function explicitBessMW(project){
+  const s=safe(project.scale);
+  const tech=safe(project.technology).toUpperCase();
+
+  // Combined projects: only count MW explicitly associated with BESS.
+  const explicit=[...s.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*MW\s*\/\s*[\d,]+(?:\.\d+)?\s*MWh\s*BESS/gi)];
+  if(explicit.length){
+    return explicit.reduce((sum,m)=>sum+Number(m[1].replace(/,/g,"")),0);
+  }
+
+  // Pure BESS / BESS portfolio projects: the scale is the BESS scale.
+  // Exclude mixed generation descriptions where the scale does not identify
+  // which MW belong to BESS.
+  const pureBess=/BESS/i.test(tech) && !/PV|WIND|P2X|INTERCONNECTOR|RENEWABLES?\s*\+\s*BESS/i.test(tech);
+  if(pureBess){
+    const m=/^(\d[\d,]*(?:\.\d+)?)\s*MW\s*\//.exec(s);
+    return m?Number(m[1].replace(/,/g,"")):0;
+  }
+  return 0;
+}
+
+function explicitBessMWh(project){
+  const s=safe(project.scale);
+  const tech=safe(project.technology).toUpperCase();
+
+  const explicit=[...s.matchAll(/\d[\d,]*(?:\.\d+)?\s*MW\s*\/\s*([\d,]+(?:\.\d+)?)\s*MWh\s*BESS/gi)];
+  if(explicit.length){
+    return explicit.reduce((sum,m)=>sum+Number(m[1].replace(/,/g,"")),0);
+  }
+
+  const pureBess=/BESS/i.test(tech) && !/PV|WIND|P2X|INTERCONNECTOR|RENEWABLES?\s*\+\s*BESS/i.test(tech);
+  if(pureBess){
+    const m=/^\d[\d,]*(?:\.\d+)?\s*MW\s*\/\s*([\d,]+(?:\.\d+)?)\s*MWh/.exec(s);
+    return m?Number(m[1].replace(/,/g,"")):0;
+  }
+  return 0;
+}
+
+fetch("./projects.json")
+  .then(r=>{
+    if(!r.ok) throw new Error("projects.json could not be loaded");
     return r.json();
   })
-  .then(data => {
-    projects = Array.isArray(data) ? data : (data && typeof data.content === "string" ? JSON.parse(data.content) : []);
-    if (!Array.isArray(projects)) throw new Error("projects.json does not contain a project array");
+  .then(data=>{
+    if(!Array.isArray(data)) throw new Error("projects.json must contain an array");
+    projects=data;
+    validateData();
     document.getElementById("loading").remove();
     buildFilters();
     updateStats();
     initGlobe();
   })
-  .catch(err => {
-    document.getElementById("loading").textContent = "Could not load project data";
+  .catch(err=>{
+    document.getElementById("loading").textContent="Could not load projects.json";
     console.error(err);
   });
 
+function validateData(){
+  if(projects.length!==20) console.error("QC: expected 20 projects, found",projects.length);
+  const required=["name","location","technology","scale","projectStage","role","contribution","outcome"];
+  projects.forEach((p,i)=>{
+    required.forEach(k=>{if(!safe(p[k])) console.warn(`QC: project ${i+1} missing ${k}`)});
+    if(p.lat===0 || p.lon===0) console.error("QC: 0,0 coordinate detected",p.name);
+    if(p.lat!==null && typeof p.lat!=="number") console.error("QC: lat must be numeric or null",p.name);
+    if(p.lon!==null && typeof p.lon!=="number") console.error("QC: lon must be numeric or null",p.name);
+  });
+}
+
 function buildFilters(){
- const el=document.getElementById("filters"); el.innerHTML="";
- const actual=[...new Set(projects.map(p=>safe(p.type).toUpperCase()).filter(Boolean))];
- const options=["ALL",...actual.filter(x=>!["ALL"].includes(x))];
- options.forEach(t=>{const b=document.createElement("button");b.textContent=t;b.className=t==="ALL"?"active":"";b.onclick=()=>{activeType=t;document.querySelectorAll(".filter button").forEach(x=>x.classList.remove("active"));b.classList.add("active");updateMarkers()};el.appendChild(b)});
+  const el=document.getElementById("filters");
+  el.innerHTML="";
+  const actual=[...new Set(projects.map(p=>safe(p.technologyGroup)).filter(Boolean))];
+  const options=["ALL",...actual];
+  options.forEach(t=>{
+    const b=document.createElement("button");
+    b.textContent=t;
+    b.className=t==="ALL"?"active":"";
+    b.onclick=()=>{
+      activeType=t;
+      document.querySelectorAll(".filter button").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      updateMarkers();
+    };
+    el.appendChild(b);
+  });
 }
+
 function updateStats(){
- const count=projects.length;
- const mw=projects.reduce((s,p)=>s+(Number(p.capacityMW)||0),0);
- const mwh=projects.reduce((s,p)=>s+(Number(p.energyMWh)||0),0);
- const countries=new Set(projects.map(p=>safe(p.country)).filter(Boolean)).size;
- document.getElementById("stats").innerHTML=`<div class="stat"><b>${count}</b><span>Projects</span></div><div class="stat"><b>${mw?Math.round(mw).toLocaleString()+" MW":"10+"}</b><span>Capacity</span></div><div class="stat"><b>${mwh?Math.round(mwh).toLocaleString()+" MWh":"—"}</b><span>Storage</span></div><div class="stat"><b>${countries}</b><span>Countries</span></div>`;
+  const count=projects.length;
+  const bessMW=projects.reduce((s,p)=>s+explicitBessMW(p),0);
+  const bessMWh=projects.reduce((s,p)=>s+explicitBessMWh(p),0);
+  const locations=new Set(projects.flatMap(p=>splitLocation(p.location))).size;
+  document.getElementById("stats").innerHTML=
+    `<div class="stat"><b>${count}</b><span>Projects</span></div>`+
+    `<div class="stat"><b>${bessMW.toLocaleString()} MW</b><span>BESS capacity</span></div>`+
+    `<div class="stat"><b>${(bessMWh/1000).toFixed(2)} GWh</b><span>BESS storage</span></div>`+
+    `<div class="stat"><b>${locations}</b><span>Locations</span></div>`;
 }
+
 function initGlobe(){
- const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,1000);camera.position.set(0,0,3.25);
- const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;app.prepend(renderer.domElement);
- const globe=new THREE.Group();scene.add(globe); globe.rotation.y = -2.2;
- const loader=new THREE.TextureLoader();
- const earth=loader.load("https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg");
- const normal=loader.load("https://threejs.org/examples/textures/planets/earth_normal_2048.jpg");
- const spec=loader.load("https://threejs.org/examples/textures/planets/earth_specular_2048.jpg");
- globe.add(new THREE.Mesh(new THREE.SphereGeometry(1,64,64),new THREE.MeshPhongMaterial({map:earth,normalMap:normal,specularMap:spec,specular:new THREE.Color(0x30485b),shininess:12})));
- const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(1.045,64,64),new THREE.MeshBasicMaterial({color:0x6dd6ff,transparent:true,opacity:.055,side:THREE.BackSide}));globe.add(atmosphere);
- const clouds=new THREE.Mesh(new THREE.SphereGeometry(1.012,64,64),new THREE.MeshPhongMaterial({map:loader.load("https://threejs.org/examples/textures/planets/earth_clouds_1024.png"),transparent:true,opacity:.16,depthWrite:false}));globe.add(clouds);
- globe.add(new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.SphereGeometry(1.006,24,16)),new THREE.LineBasicMaterial({color:0x8ab4c7,transparent:true,opacity:.055})));
- scene.add(new THREE.AmbientLight(0xffffff,.85));const key=new THREE.DirectionalLight(0xbfe7ff,1.8);key.position.set(3,2,4);scene.add(key);
- const markerGroup=new THREE.Group();globe.add(markerGroup);
- function latLon(lat,lon,r=1.025){const phi=(90-lat)*Math.PI/180,theta=(lon+180)*Math.PI/180;return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(theta),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta))}
- function makeMarker(p){const lat=Number(p.lat??p.latitude),lon=Number(p.lon??p.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;const g=new THREE.Group();g.position.copy(latLon(lat,lon));const color=safe(p.type).toUpperCase().includes("BESS")?0x7dd3fc:safe(p.type).toUpperCase().includes("HYBRID")?0xa78bfa:0x86efac;g.add(new THREE.Mesh(new THREE.SphereGeometry(.022,16,16),new THREE.MeshBasicMaterial({color})));const ring=new THREE.Mesh(new THREE.RingGeometry(.028,.035,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.65,side:THREE.DoubleSide}));ring.lookAt(0,0,0);g.add(ring);g.userData.project=p;markerGroup.add(g);return g}
- function updateMarkers(){markerGroup.clear();markerObjects=[];projects.filter(p=>activeType==="ALL"||safe(p.type).toUpperCase()===activeType).forEach(p=>{const m=makeMarker(p);if(m)markerObjects.push(m)})}
- updateMarkers();
- let dragging=false,prevX=0,prevY=0,velX=0,velY=0;
- renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
- renderer.domElement.addEventListener("pointermove",e=>{if(!dragging)return;const dx=e.clientX-prevX,dy=e.clientY-prevY;globe.rotation.y+=dx*.006;globe.rotation.x+=dy*.006;globe.rotation.x=Math.max(-1.2,Math.min(1.2,globe.rotation.x));velX=dx*.006;velY=dy*.006;prevX=e.clientX;prevY=e.clientY});
- renderer.domElement.addEventListener("pointerup",()=>dragging=false);
- renderer.domElement.addEventListener("wheel",e=>camera.position.z=Math.max(1.65,Math.min(5,camera.position.z+e.deltaY*.0015)),{passive:true});
- const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
- renderer.domElement.addEventListener("click",e=>{if(Math.abs(velX)+Math.abs(velY)>.03){velX=velY=0;return}mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(markerGroup.children,true);if(hits.length){let o=hits[0].object;while(o.parent&&!o.userData.project)o=o.parent;if(o.userData.project)openPanel(o.userData.project)}});
- function openPanel(p){
-  const cap=(p.capacityMW||p.energyMWh)?`${p.capacityMW?p.capacityMW+" MW":""}${p.capacityMW&&p.energyMWh?" / ":""}${p.energyMWh?p.energyMWh+" MWh":""}`:"Project";
-  const details=[["Role",p.role],["Technology",p.technology],["Grid",p.gridConnection],["Business model",p.businessModel],["Status",p.status],["Employer",p.employer]].filter(x=>x[1]);
-  const sections=[["My contribution",p.contribution],["Key challenges",p.challenges],["Technical scope",p.technicalScope],["Commercial scope",p.commercialScope],["Key technologies / systems",p.systems||p.technologies],["Key achievement",p.achievement],["Project outcome",p.outcome]].filter(x=>x[1]);
-  document.getElementById("panel-content").innerHTML=`<span class="tag">${esc(p.type||"PROJECT")}</span><div class="project-title">${esc(p.name)}</div><div class="location">${esc(p.country)}${p.region?" · "+esc(p.region):""}${p.yearStart?" · "+esc(p.yearStart)+(p.yearEnd&&p.yearEnd!=p.yearStart?"–"+esc(p.yearEnd):""):""}</div><div class="capacity">${esc(cap)}</div><div class="capacity-label">Project scale</div><div class="rule"></div><div class="section-title">The project</div><p class="description">${esc(p.description)||"Project information supplied in the portfolio database."}</p><div class="grid">${details.map(x=>`<div class="cell"><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join("")}</div>${sections.map(x=>`<div class="rule"></div><div class="section-title">${esc(x[0])}</div><p class="longtext">${esc(x[1])}</p>`).join("")}<div class="footer-note">Public portfolio data. Confidentiality status: ${esc(p.publiclyDisclosable||"Not specified")}.</div>`;
-  document.getElementById("panel").classList.add("open");
- }
- document.getElementById("close").onclick=()=>document.getElementById("panel").classList.remove("open");
- document.getElementById("reset").onclick=()=>{globe.rotation.set(0,-2.2,0);camera.position.z=3.25;document.getElementById("panel").classList.remove("open")};
- document.getElementById("about").onclick=()=>{document.getElementById("panel-content").innerHTML=`<span class="tag">PORTFOLIO</span><div class="project-title">Daniel de Waal</div><div class="location">Energy storage & renewable energy</div><div class="rule"></div><div class="section-title">About this portfolio</div><p class="description">An interactive overview of selected renewable-energy and battery-storage projects, showing the geographic scale, technical scope and evolution of the work.</p>`;document.getElementById("panel").classList.add("open")};
- function animate(){requestAnimationFrame(animate);if(!dragging){globe.rotation.y+=.0007+velX*.08;globe.rotation.x+=velY*.08;clouds.rotation.y+=.00025;velX*=.94;velY*=.94}markerObjects.forEach(m=>{const s=1+Math.sin(performance.now()*.004+m.position.x*20)*.12;m.children[1].scale.set(s,s,s)});renderer.render(scene,camera)}animate();
- addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)})
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,1000);
+  camera.position.set(0,0,3.25);
+
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  app.prepend(renderer.domElement);
+
+  const globe=new THREE.Group();
+  scene.add(globe);
+  globe.rotation.y=-2.2;
+
+  const loader=new THREE.TextureLoader();
+  const earth=loader.load("https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg");
+  const normal=loader.load("https://threejs.org/examples/textures/planets/earth_normal_2048.jpg");
+  const spec=loader.load("https://threejs.org/examples/textures/planets/earth_specular_2048.jpg");
+
+  globe.add(new THREE.Mesh(
+    new THREE.SphereGeometry(1,64,64),
+    new THREE.MeshPhongMaterial({
+      map:earth,normalMap:normal,specularMap:spec,
+      specular:new THREE.Color(0x30485b),shininess:12
+    })
+  ));
+
+  const atmosphere=new THREE.Mesh(
+    new THREE.SphereGeometry(1.045,64,64),
+    new THREE.MeshBasicMaterial({
+      color:0x6dd6ff,transparent:true,opacity:.055,side:THREE.BackSide
+    })
+  );
+  globe.add(atmosphere);
+
+  const clouds=new THREE.Mesh(
+    new THREE.SphereGeometry(1.012,64,64),
+    new THREE.MeshPhongMaterial({
+      map:loader.load("https://threejs.org/examples/textures/planets/earth_clouds_1024.png"),
+      transparent:true,opacity:.16,depthWrite:false
+    })
+  );
+  globe.add(clouds);
+
+  globe.add(new THREE.LineSegments(
+    new THREE.WireframeGeometry(new THREE.SphereGeometry(1.006,24,16)),
+    new THREE.LineBasicMaterial({color:0x8ab4c7,transparent:true,opacity:.055})
+  ));
+
+  scene.add(new THREE.AmbientLight(0xffffff,.85));
+  const key=new THREE.DirectionalLight(0xbfe7ff,1.8);
+  key.position.set(3,2,4);
+  scene.add(key);
+
+  const markerGroup=new THREE.Group();
+  globe.add(markerGroup);
+
+  function latLon(lat,lon,r=1.025){
+    const phi=(90-lat)*Math.PI/180;
+    const theta=(lon+180)*Math.PI/180;
+    return new THREE.Vector3(
+      -r*Math.sin(phi)*Math.cos(theta),
+      r*Math.cos(phi),
+      r*Math.sin(phi)*Math.sin(theta)
+    );
+  }
+
+  function makeMarker(p){
+    if(!Number.isFinite(p.lat)||!Number.isFinite(p.lon)) return null;
+    const g=new THREE.Group();
+    g.position.copy(latLon(p.lat,p.lon));
+    const color=p.technologyGroup==="BESS"?0x7dd3fc:
+      p.technologyGroup==="PV + BESS"?0xa78bfa:0x86efac;
+
+    g.add(new THREE.Mesh(
+      new THREE.SphereGeometry(.022,16,16),
+      new THREE.MeshBasicMaterial({color})
+    ));
+
+    const ring=new THREE.Mesh(
+      new THREE.RingGeometry(.028,.035,24),
+      new THREE.MeshBasicMaterial({
+        color:0xffffff,transparent:true,opacity:.65,side:THREE.DoubleSide
+      })
+    );
+    ring.lookAt(0,0,0);
+    g.add(ring);
+    g.userData.project=p;
+    markerGroup.add(g);
+    return g;
+  }
+
+  function updateMarkers(){
+    markerGroup.clear();
+    markerObjects=[];
+    projects
+      .filter(p=>activeType==="ALL"||safe(p.technologyGroup)===activeType)
+      .forEach(p=>{
+        const m=makeMarker(p);
+        if(m) markerObjects.push(m);
+      });
+  }
+
+  updateMarkers();
+
+  let dragging=false,prevX=0,prevY=0,velX=0,velY=0;
+
+  renderer.domElement.addEventListener("pointerdown",e=>{
+    dragging=true;prevX=e.clientX;prevY=e.clientY;
+    renderer.domElement.setPointerCapture(e.pointerId);
+  });
+
+  renderer.domElement.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    const dx=e.clientX-prevX,dy=e.clientY-prevY;
+    globe.rotation.y+=dx*.006;
+    globe.rotation.x+=dy*.006;
+    globe.rotation.x=Math.max(-1.2,Math.min(1.2,globe.rotation.x));
+    velX=dx*.006;velY=dy*.006;
+    prevX=e.clientX;prevY=e.clientY;
+  });
+
+  renderer.domElement.addEventListener("pointerup",()=>dragging=false);
+
+  renderer.domElement.addEventListener("wheel",e=>{
+    camera.position.z=Math.max(1.65,Math.min(5,camera.position.z+e.deltaY*.0015));
+  },{passive:true});
+
+  const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+
+  renderer.domElement.addEventListener("click",e=>{
+    if(Math.abs(velX)+Math.abs(velY)>.03){velX=velY=0;return}
+    mouse.x=e.clientX/innerWidth*2-1;
+    mouse.y=-(e.clientY/innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObjects(markerGroup.children,true);
+    if(hits.length){
+      let o=hits[0].object;
+      while(o.parent&&!o.userData.project)o=o.parent;
+      if(o.userData.project)openPanel(o.userData.project);
+    }
+  });
+
+  function field(label,value){
+    if(!safe(value)) return "";
+    return `<div class="cell"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
+  }
+
+  function openPanel(p){
+    document.getElementById("panel-content").innerHTML=
+      `<span class="tag">${esc(p.technologyGroup||"PROJECT")}</span>`+
+      `<div class="project-title">${esc(p.name)}</div>`+
+      `<div class="location">${esc(p.location)}</div>`+
+      `<div class="capacity">${esc(p.scale)}</div>`+
+      `<div class="capacity-label">Project scale</div>`+
+      `<div class="rule"></div>`+
+      `<div class="section-title">Project</div>`+
+      `<div class="grid">`+
+        field("Location",p.location)+
+        field("Technology",p.technology)+
+        field("Project Stage",p.projectStage)+
+        field("Your Role",p.role)+
+      `</div>`+
+      `<div class="rule"></div>`+
+      `<div class="section-title">Your Contribution</div>`+
+      `<p class="longtext">${esc(p.contribution)}</p>`+
+      `<div class="rule"></div>`+
+      `<div class="section-title">Key Outcome</div>`+
+      `<p class="longtext">${esc(p.outcome)}</p>`+
+      `<div class="footer-note">Public-facing project information. Disclosure rights should be confirmed before publication.</div>`;
+
+    document.getElementById("panel").classList.add("open");
+  }
+
+  document.getElementById("close").onclick=()=>{
+    document.getElementById("panel").classList.remove("open");
+  };
+
+  document.getElementById("reset").onclick=()=>{
+    globe.rotation.set(0,-2.2,0);
+    camera.position.z=3.25;
+    document.getElementById("panel").classList.remove("open");
+  };
+
+  document.getElementById("about").onclick=()=>{
+    document.getElementById("panel-content").innerHTML=
+      `<span class="tag">PORTFOLIO</span>`+
+      `<div class="project-title">Daniel de Waal</div>`+
+      `<div class="location">Energy storage · renewable energy · engineering</div>`+
+      `<div class="rule"></div>`+
+      `<div class="section-title">About this portfolio</div>`+
+      `<p class="description">An interactive overview of selected energy projects, focused on project scale, technical scope and Daniel's contribution.</p>`+
+      `<div class="rule"></div>`+
+      `<div class="section-title">Map data</div>`+
+      `<p class="description">Project markers are shown only where verified coordinates are available. The current recruiter source table does not contain verified project coordinates, so no placeholder markers are displayed.</p>`;
+    document.getElementById("panel").classList.add("open");
+  };
+
+  function animate(){
+    requestAnimationFrame(animate);
+    if(!dragging){
+      globe.rotation.y+=.0007+velX*.08;
+      globe.rotation.x+=velY*.08;
+      clouds.rotation.y+=.00025;
+      velX*=.94;velY*=.94;
+    }
+    markerObjects.forEach(m=>{
+      const s=1+Math.sin(performance.now()*.004+m.position.x*20)*.12;
+      m.children[1].scale.set(s,s,s);
+    });
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
 }
 </script>
+
 </body>
 </html>
