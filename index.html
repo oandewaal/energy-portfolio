@@ -118,7 +118,7 @@ function initGlobe(){
 
   const globe=new THREE.Group();
   scene.add(globe);
-  globe.rotation.y=-2.2;
+ globe.rotation.set(0.25, -1.4, 0);
 
   const loader=new THREE.TextureLoader();
   const earth=loader.load("https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg");
@@ -282,7 +282,7 @@ function initGlobe(){
   };
 
   document.getElementById("reset").onclick=()=>{
-    globe.rotation.set(0,-1.4,0);
+    globe.rotation.set(0.25,-1.4,0);
     camera.position.z=3.25;
     document.getElementById("panel").classList.remove("open");
   };
