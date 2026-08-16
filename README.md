@@ -14,11 +14,6 @@ README.md        # Project documentation
 
 The project data is maintained in Excel.
 
-1. Update the Excel project database.
-2. Upload it to ChatGPT.
-3. Generate the updated `projects.json`.
-4. Replace `projects.json` in GitHub.
-
 The website code normally does not need to change.
 
 ## Hosting
@@ -28,10 +23,6 @@ The site is hosted with GitHub Pages:
 https://oandewaal.github.io/energy-portfolio/
 
 Changes committed to `main` are automatically published.
-
-## Confidentiality
-
-Only publish information that is safe to disclose. Review projects marked `Needs Review` before publishing.
 
 ## Technology
 
