@@ -11,10 +11,9 @@
 #app{width:100%;height:100%;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 45%,#101722 0,#05070a 55%,#020305 100%)}canvas{display:block}
 .topbar{position:absolute;z-index:5;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:24px 28px;pointer-events:none}
 .brand{pointer-events:auto}.brand .name{font-size:15px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}.brand .role{font-size:12px;color:var(--muted);margin-top:4px}
-.nav{display:flex;gap:8px;pointer-events:auto}.nav button,.filter button{border:1px solid var(--line);background:rgba(8,11,15,.55);color:#dce3ea;border-radius:999px;padding:9px 13px;font-size:11px;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(12px);transition:.2s}.nav button:hover,.filter button:hover,.filter button.active{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.25)}
+.nav{display:flex;gap:8px;pointer-events:auto}.nav button{border:1px solid var(--line);background:rgba(8,11,15,.55);color:#dce3ea;border-radius:999px;padding:9px 13px;font-size:11px;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(12px);transition:.2s}.nav button:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.25)}
 .hero{position:absolute;z-index:4;left:28px;top:105px;max-width:440px;pointer-events:none}.eyebrow{font-size:11px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;font-weight:700}
 h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spacing:-.055em}.hero p{font-size:15px;line-height:1.55;color:#aeb8c2;margin:0;max-width:400px}.stats{display:flex;gap:25px;margin-top:25px}.stat b{display:block;font-size:22px;letter-spacing:-.03em}.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
-.controls{position:absolute;z-index:6;left:28px;bottom:28px;display:flex;align-items:center;gap:8px;pointer-events:auto}.filter{display:flex;gap:6px;flex-wrap:wrap}.hint{font-size:10px;color:#697581;margin-left:8px}
 #panel{position:absolute;z-index:10;right:22px;top:22px;bottom:22px;width:min(470px,calc(100vw - 44px));background:var(--panel);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(24px);box-shadow:0 25px 80px rgba(0,0,0,.45);transform:translateX(calc(100% + 30px));transition:transform .42s cubic-bezier(.2,.8,.2,1);overflow:auto}
 #panel.open{transform:translateX(0)}.panel-inner{padding:26px}.close{float:right;border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:17px}
 .tag{display:inline-flex;border:1px solid rgba(125,211,252,.25);color:var(--accent);background:rgba(125,211,252,.07);border-radius:999px;padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.1em}.project-title{font-size:37px;line-height:1;margin:20px 0 8px;letter-spacing:-.045em}.location{color:var(--muted);font-size:13px}.capacity{font-size:27px;font-weight:750;margin:24px 0 3px;letter-spacing:-.03em}.capacity-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}
@@ -23,7 +22,7 @@ h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spac
 .longtext{font-size:13px;line-height:1.6;color:#bcc5ce;margin:0}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.chip{padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.055);font-size:10px;color:#d0d7de}
 .footer-note{margin-top:30px;font-size:10px;line-height:1.5;color:#66717d}
 #loading{position:absolute;inset:0;display:grid;place-items:center;color:#8d99a5;font-size:12px;letter-spacing:.08em;text-transform:uppercase;z-index:30;background:#05070a}
-@media(max-width:700px){.topbar{padding:17px}.hero{left:17px;top:82px;max-width:310px}h1{font-size:43px}.stats{gap:15px}.controls{left:17px;right:17px;bottom:17px}.hint{display:none}.nav button{display:none}#panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;height:min(72vh,620px);border-radius:20px}}
+@media(max-width:700px){.topbar{padding:17px}.hero{left:17px;top:82px;max-width:310px}h1{font-size:43px}.stats{gap:15px}.nav button{display:none}#panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;height:min(72vh,620px);border-radius:20px}}
 </style>
 </head>
 <body>
@@ -31,12 +30,12 @@ h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spac
 <div id="loading">Loading project portfolio</div>
 <div class="topbar"><div class="brand"><div class="name">Daniel de Waal</div><div class="role">Energy Storage · Renewable Energy · Engineering</div></div><div class="nav"><button id="reset">RESET GLOBE</button><button id="about">ABOUT</button></div></div>
 <div class="hero"><div class="eyebrow">Selected work · 2016–2026</div><h1>Energy projects,<br>across the world.</h1><p>Explore renewable-energy and battery-storage projects. Drag the Earth, zoom in and select a project to see the story behind it.</p><div class="stats" id="stats"></div></div>
-<div class="controls"><div class="filter" id="filters"></div><div class="hint">Drag · Scroll · Click a project</div></div>
+
 <div id="panel"><div class="panel-inner"><button class="close" id="close">×</button><div id="panel-content"></div></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-let projects=[], activeType="ALL", markerObjects=[];
+let projects=[], markerObjects=[];
 const app=document.getElementById("app");
 
 function safe(v){return v===null||v===undefined||v===""?"":String(v)}
@@ -96,7 +95,6 @@ fetch("./projects.json")
     projects=data;
     validateData();
     document.getElementById("loading").remove();
-    buildFilters();
     updateStats();
     initGlobe();
   })
@@ -113,25 +111,6 @@ function validateData(){
     if(p.lat===0 || p.lon===0) console.error("QC: 0,0 coordinate detected",p.name);
     if(p.lat!==null && typeof p.lat!=="number") console.error("QC: lat must be numeric or null",p.name);
     if(p.lon!==null && typeof p.lon!=="number") console.error("QC: lon must be numeric or null",p.name);
-  });
-}
-
-function buildFilters(){
-  const el=document.getElementById("filters");
-  el.innerHTML="";
-  const actual=[...new Set(projects.map(p=>safe(p.technologyGroup)).filter(Boolean))];
-  const options=["ALL",...actual];
-  options.forEach(t=>{
-    const b=document.createElement("button");
-    b.textContent=t;
-    b.className=t==="ALL"?"active":"";
-    b.onclick=()=>{
-      activeType=t;
-      document.querySelectorAll(".filter button").forEach(x=>x.classList.remove("active"));
-      b.classList.add("active");
-      updateMarkers();
-    };
-    el.appendChild(b);
   });
 }
 
@@ -243,12 +222,10 @@ function initGlobe(){
   function updateMarkers(){
     markerGroup.clear();
     markerObjects=[];
-    projects
-      .filter(p=>activeType==="ALL"||safe(p.technologyGroup)===activeType)
-      .forEach(p=>{
-        const m=makeMarker(p);
-        if(m) markerObjects.push(m);
-      });
+    projects.forEach(p=>{
+      const m=makeMarker(p);
+      if(m) markerObjects.push(m);
+    });
   }
 
   updateMarkers();
@@ -342,7 +319,7 @@ function initGlobe(){
       `<p class="description">An interactive overview of selected energy projects, focused on project scale, technical scope and Daniel's contribution.</p>`+
       `<div class="rule"></div>`+
       `<div class="section-title">Map data</div>`+
-      `<p class="description">Project markers are shown only where verified coordinates are available. The current recruiter source table does not contain verified project coordinates, so no placeholder markers are displayed.</p>`;
+      `<p class="description">Project markers are shown using the supplied project coordinates. Projects without valid coordinates are not displayed as markers.</p>`;
     document.getElementById("panel").classList.add("open");
   };
 
