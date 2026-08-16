@@ -14,13 +14,9 @@ README.md        # Project documentation
 
 The project data is maintained in Excel.
 
-The website code normally does not need to change.
-
 ## Hosting
 
-The site is hosted with GitHub Pages:
-
-https://oandewaal.github.io/energy-portfolio/
+The site is hosted with GitHub Pages: https://oandewaal.github.io/energy-portfolio/
 
 Changes committed to `main` are automatically published.
 
