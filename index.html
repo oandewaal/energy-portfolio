@@ -4,86 +4,66 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daniel de Waal | Energy Portfolio</title>
-<meta name="description" content="Interactive portfolio of Daniel de Waal's renewable energy and energy storage projects.">
+<meta name="description" content="Selected energy projects from Daniel de Waal's broader 4.59 GW / 15.84 GWh project experience.">
 <style>
-:root{--bg:#05070a;--panel:rgba(11,15,21,.92);--line:rgba(255,255,255,.12);--text:#f4f6f8;--muted:#9aa4af;--accent:#7dd3fc;--purple:#a78bfa;--green:#86efac}
+:root{--bg:#05070a;--panel:rgba(11,15,21,.92);--line:rgba(255,255,255,.12);--text:#f4f6f8;--muted:#9aa4af;--accent:#7dd3fc}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
 #app{width:100%;height:100%;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 45%,#101722 0,#05070a 55%,#020305 100%)}canvas{display:block}
 .topbar{position:absolute;z-index:5;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:24px 28px;pointer-events:none}
 .brand{pointer-events:auto}.brand .name{font-size:15px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}.brand .role{font-size:12px;color:var(--muted);margin-top:4px}
 .nav{display:flex;gap:8px;pointer-events:auto}.nav button{border:1px solid var(--line);background:rgba(8,11,15,.55);color:#dce3ea;border-radius:999px;padding:9px 13px;font-size:11px;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(12px);transition:.2s}.nav button:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.25)}
-.hero{position:absolute;z-index:4;left:28px;top:105px;max-width:440px;pointer-events:none}.eyebrow{font-size:11px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;font-weight:700}
-h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spacing:-.055em}.hero p{font-size:15px;line-height:1.55;color:#aeb8c2;margin:0;max-width:400px}.stats{display:flex;gap:25px;margin-top:25px}.stat b{display:block;font-size:22px;letter-spacing:-.03em}.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.hero{position:absolute;z-index:4;left:28px;top:105px;max-width:470px;pointer-events:none}.eyebrow{font-size:11px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:clamp(38px,5vw,72px);line-height:.96;margin:12px 0 18px;letter-spacing:-.055em}.hero p{font-size:15px;line-height:1.55;color:#aeb8c2;margin:0;max-width:430px}.stats{display:flex;gap:25px;margin-top:25px}.stat b{display:block;font-size:22px;letter-spacing:-.03em}.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.controls{position:absolute;z-index:6;left:28px;bottom:28px;display:flex;align-items:center;gap:8px;pointer-events:none}.hint{font-size:10px;color:#697581;margin-left:8px}
 #panel{position:absolute;z-index:10;right:22px;top:22px;bottom:22px;width:min(470px,calc(100vw - 44px));background:var(--panel);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(24px);box-shadow:0 25px 80px rgba(0,0,0,.45);transform:translateX(calc(100% + 30px));transition:transform .42s cubic-bezier(.2,.8,.2,1);overflow:auto}
 #panel.open{transform:translateX(0)}.panel-inner{padding:26px}.close{float:right;border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:17px}
 .tag{display:inline-flex;border:1px solid rgba(125,211,252,.25);color:var(--accent);background:rgba(125,211,252,.07);border-radius:999px;padding:6px 9px;font-size:10px;text-transform:uppercase;letter-spacing:.1em}.project-title{font-size:37px;line-height:1;margin:20px 0 8px;letter-spacing:-.045em}.location{color:var(--muted);font-size:13px}.capacity{font-size:27px;font-weight:750;margin:24px 0 3px;letter-spacing:-.03em}.capacity-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}
 .rule{height:1px;background:var(--line);margin:25px 0}.section-title{font-size:10px;color:#7e8994;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:9px}.description{font-size:14px;line-height:1.65;color:#c3cbd3}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}.cell{padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}.cell span{display:block;color:#78838e;font-size:9px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}.cell b{font-size:12px}
-.longtext{font-size:13px;line-height:1.6;color:#bcc5ce;margin:0}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.chip{padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.055);font-size:10px;color:#d0d7de}
-.footer-note{margin-top:30px;font-size:10px;line-height:1.5;color:#66717d}
+.longtext{font-size:13px;line-height:1.6;color:#bcc5ce;margin:0}.footer-note{margin-top:30px;font-size:10px;line-height:1.5;color:#66717d}
 #loading{position:absolute;inset:0;display:grid;place-items:center;color:#8d99a5;font-size:12px;letter-spacing:.08em;text-transform:uppercase;z-index:30;background:#05070a}
-@media(max-width:700px){.topbar{padding:17px}.hero{left:17px;top:82px;max-width:310px}h1{font-size:43px}.stats{gap:15px}.nav button{display:none}#panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;height:min(72vh,620px);border-radius:20px}}
+@media(max-width:700px){.topbar{padding:17px}.hero{left:17px;top:82px;max-width:320px}h1{font-size:43px}.stats{gap:15px;flex-wrap:wrap}.controls{left:17px;bottom:17px}.nav button{display:none}#panel{left:10px;right:10px;top:auto;bottom:10px;width:auto;height:min(72vh,620px);border-radius:20px}}
 </style>
 </head>
 <body>
 <div id="app">
-<div id="loading">Loading project portfolio</div>
-<div class="topbar"><div class="brand"><div class="name">Daniel de Waal</div><div class="role">Energy Storage · Renewable Energy · Engineering</div></div><div class="nav"><button id="reset">RESET GLOBE</button><button id="about">ABOUT</button></div></div>
-<div class="hero"><div class="eyebrow">Selected work · 2016–2026</div><h1>Energy projects,<br>across the world.</h1><p>Explore renewable-energy and battery-storage projects. Drag the Earth, zoom in and select a project to see the story behind it.</p><div class="stats" id="stats"></div></div>
+<div id="loading">Loading selected work</div>
 
-<div id="panel"><div class="panel-inner"><button class="close" id="close">×</button><div id="panel-content"></div></div></div>
+<div class="topbar">
+  <div class="brand">
+    <div class="name">Daniel de Waal</div>
+    <div class="role">Energy Storage · Renewable Energy · Engineering</div>
+  </div>
+  <div class="nav">
+    <button id="reset">RESET GLOBE</button>
+    <button id="about">ABOUT</button>
+  </div>
 </div>
+
+<div class="hero">
+  <div class="eyebrow">Selected work · 2016–2026</div>
+  <h1>Energy projects,<br>across the world.</h1>
+  <p>Explore a selection of energy projects from a broader 4.59 GW / 15.84 GWh project experience. Drag the Earth, zoom in and select a project to see the work behind it.</p>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="controls"><div class="hint">Drag · Scroll · Click a project</div></div>
+
+<div id="panel">
+  <div class="panel-inner">
+    <button class="close" id="close">×</button>
+    <div id="panel-content"></div>
+  </div>
+</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-let projects=[], markerObjects=[];
+let projects=[], portfolioMeta={}, markerObjects=[];
 const app=document.getElementById("app");
 
 function safe(v){return v===null||v===undefined||v===""?"":String(v)}
 function esc(v){return safe(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-
-function splitLocation(location){
-  return safe(location).split("/").map(x=>x.trim()).filter(Boolean);
-}
-
-/* BESS MW is counted only where the scale explicitly identifies BESS capacity.
-   PV capacity is never added to the BESS statistic. */
-function explicitBessMW(project){
-  const s=safe(project.scale);
-  const tech=safe(project.technology).toUpperCase();
-
-  // Combined projects: only count MW explicitly associated with BESS.
-  const explicit=[...s.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*MW\s*\/\s*[\d,]+(?:\.\d+)?\s*MWh\s*BESS/gi)];
-  if(explicit.length){
-    return explicit.reduce((sum,m)=>sum+Number(m[1].replace(/,/g,"")),0);
-  }
-
-  // Pure BESS / BESS portfolio projects: the scale is the BESS scale.
-  // Exclude mixed generation descriptions where the scale does not identify
-  // which MW belong to BESS.
-  const pureBess=/BESS/i.test(tech) && !/PV|WIND|P2X|INTERCONNECTOR|RENEWABLES?\s*\+\s*BESS/i.test(tech);
-  if(pureBess){
-    const m=/^(\d[\d,]*(?:\.\d+)?)\s*MW\s*\//.exec(s);
-    return m?Number(m[1].replace(/,/g,"")):0;
-  }
-  return 0;
-}
-
-function explicitBessMWh(project){
-  const s=safe(project.scale);
-  const tech=safe(project.technology).toUpperCase();
-
-  const explicit=[...s.matchAll(/\d[\d,]*(?:\.\d+)?\s*MW\s*\/\s*([\d,]+(?:\.\d+)?)\s*MWh\s*BESS/gi)];
-  if(explicit.length){
-    return explicit.reduce((sum,m)=>sum+Number(m[1].replace(/,/g,"")),0);
-  }
-
-  const pureBess=/BESS/i.test(tech) && !/PV|WIND|P2X|INTERCONNECTOR|RENEWABLES?\s*\+\s*BESS/i.test(tech);
-  if(pureBess){
-    const m=/^\d[\d,]*(?:\.\d+)?\s*MW\s*\/\s*([\d,]+(?:\.\d+)?)\s*MWh/.exec(s);
-    return m?Number(m[1].replace(/,/g,"")):0;
-  }
-  return 0;
-}
 
 fetch("./projects.json")
   .then(r=>{
@@ -91,39 +71,38 @@ fetch("./projects.json")
     return r.json();
   })
   .then(data=>{
-    if(!Array.isArray(data)) throw new Error("projects.json must contain an array");
-    projects=data;
+    if(!data || !Array.isArray(data.projects)) throw new Error("projects.json has an invalid structure");
+    projects=data.projects;
+    portfolioMeta=data.meta||{};
     validateData();
     document.getElementById("loading").remove();
     updateStats();
     initGlobe();
   })
   .catch(err=>{
-    document.getElementById("loading").textContent="Could not load projects.json";
+    document.getElementById("loading").textContent="Could not load project data";
     console.error(err);
   });
 
 function validateData(){
-  if(projects.length!==20) console.error("QC: expected 20 projects, found",projects.length);
+  if(projects.length!==15) console.warn("QC: expected 15 selected projects, found",projects.length);
   const required=["name","location","technology","scale","projectStage","role","contribution","outcome"];
   projects.forEach((p,i)=>{
     required.forEach(k=>{if(!safe(p[k])) console.warn(`QC: project ${i+1} missing ${k}`)});
     if(p.lat===0 || p.lon===0) console.error("QC: 0,0 coordinate detected",p.name);
-    if(p.lat!==null && typeof p.lat!=="number") console.error("QC: lat must be numeric or null",p.name);
-    if(p.lon!==null && typeof p.lon!=="number") console.error("QC: lon must be numeric or null",p.name);
+    if(typeof p.lat!=="number" || typeof p.lon!=="number") console.error("QC: invalid coordinates",p.name);
   });
 }
 
 function updateStats(){
-  const count=projects.length;
-  const bessMW=projects.reduce((s,p)=>s+explicitBessMW(p),0);
-  const bessMWh=projects.reduce((s,p)=>s+explicitBessMWh(p),0);
-  const locations=new Set(projects.flatMap(p=>splitLocation(p.location))).size;
+  const selected=portfolioMeta.selectedProjectCount||projects.length;
+  const overallGW=Number(portfolioMeta.overallExperienceGW||4.59).toFixed(2);
+  const overallGWh=Number(portfolioMeta.overallExperienceGWh||15.84).toFixed(2);
+
   document.getElementById("stats").innerHTML=
-    `<div class="stat"><b>${count}</b><span>Projects</span></div>`+
-    `<div class="stat"><b>${bessMW.toLocaleString()} MW</b><span>BESS capacity</span></div>`+
-    `<div class="stat"><b>${(bessMWh/1000).toFixed(2)} GWh</b><span>BESS storage</span></div>`+
-    `<div class="stat"><b>${locations}</b><span>Locations</span></div>`;
+    `<div class="stat"><b>${selected}</b><span>Selected projects</span></div>`+
+    `<div class="stat"><b>${overallGW} GW</b><span>Overall experience</span></div>`+
+    `<div class="stat"><b>${overallGWh} GWh</b><span>Overall experience</span></div>`;
 }
 
 function initGlobe(){
@@ -154,13 +133,12 @@ function initGlobe(){
     })
   ));
 
-  const atmosphere=new THREE.Mesh(
+  globe.add(new THREE.Mesh(
     new THREE.SphereGeometry(1.045,64,64),
     new THREE.MeshBasicMaterial({
       color:0x6dd6ff,transparent:true,opacity:.055,side:THREE.BackSide
     })
-  );
-  globe.add(atmosphere);
+  ));
 
   const clouds=new THREE.Mesh(
     new THREE.SphereGeometry(1.012,64,64),
@@ -198,8 +176,8 @@ function initGlobe(){
     if(!Number.isFinite(p.lat)||!Number.isFinite(p.lon)) return null;
     const g=new THREE.Group();
     g.position.copy(latLon(p.lat,p.lon));
-    const color=p.technologyGroup==="BESS"?0x7dd3fc:
-      p.technologyGroup==="PV + BESS"?0xa78bfa:0x86efac;
+    const type=safe(p.technology).toUpperCase();
+    const color=type.includes("BESS")?0x7dd3fc:type.includes("PV")?0xa78bfa:0x86efac;
 
     g.add(new THREE.Mesh(
       new THREE.SphereGeometry(.022,16,16),
@@ -275,7 +253,7 @@ function initGlobe(){
 
   function openPanel(p){
     document.getElementById("panel-content").innerHTML=
-      `<span class="tag">${esc(p.technologyGroup||"PROJECT")}</span>`+
+      `<span class="tag">${esc(p.technology)}</span>`+
       `<div class="project-title">${esc(p.name)}</div>`+
       `<div class="location">${esc(p.location)}</div>`+
       `<div class="capacity">${esc(p.scale)}</div>`+
@@ -294,7 +272,7 @@ function initGlobe(){
       `<div class="rule"></div>`+
       `<div class="section-title">Key Outcome</div>`+
       `<p class="longtext">${esc(p.outcome)}</p>`+
-      `<div class="footer-note">Public-facing project information. Disclosure rights should be confirmed before publication.</div>`;
+      `<div class="footer-note">Selected work from a broader 4.59 GW / 15.84 GWh project experience.</div>`;
 
     document.getElementById("panel").classList.add("open");
   }
@@ -315,20 +293,21 @@ function initGlobe(){
       `<div class="project-title">Daniel de Waal</div>`+
       `<div class="location">Energy storage · renewable energy · engineering</div>`+
       `<div class="rule"></div>`+
-      `<div class="section-title">About this portfolio</div>`+
-      `<p class="description">An interactive overview of selected energy projects, focused on project scale, technical scope and Daniel's contribution.</p>`+
+      `<div class="section-title">Selected work</div>`+
+      `<p class="description">This map shows a selected set of projects from a broader 4.59 GW / 15.84 GWh project experience.</p>`+
       `<div class="rule"></div>`+
-      `<div class="section-title">Map data</div>`+
-      `<p class="description">Project markers are shown using the supplied project coordinates. Projects without valid coordinates are not displayed as markers.</p>`;
+      `<div class="section-title">How to explore</div>`+
+      `<p class="description">Drag the Earth, zoom in and click a project marker to view the project, role, contribution and outcome.</p>`;
     document.getElementById("panel").classList.add("open");
   };
 
   function animate(){
     requestAnimationFrame(animate);
     if(!dragging){
-      globe.rotation.y+=.0007+velX*.08;
+      // Automatic rotation reversed from the previous version.
+      globe.rotation.y-=.0007;
       globe.rotation.x+=velY*.08;
-      clouds.rotation.y+=.00025;
+      clouds.rotation.y-=.00025;
       velX*=.94;velY*=.94;
     }
     markerObjects.forEach(m=>{
@@ -346,6 +325,5 @@ function initGlobe(){
   });
 }
 </script>
-
 </body>
 </html>
